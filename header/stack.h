@@ -8,35 +8,35 @@
 #ifndef STACK_H_
 #define STACK_H_
 
-struct stack_elem {
+struct STACK_ELEM {
 	int elem;
 };
 
-typedef struct stack_elem stack_elem;
-typedef struct stack_elem* stack_elem_p;
+typedef struct STACK_ELEM STACK_ELEM_T;
+typedef struct STACK_ELEM* STACK_ELEM_TP;
 
 //我将采用动态划分内存的方式来维护栈元素
-struct stack {
-	stack_elem_p top;
-	stack_elem_p head;
+struct STACK {
+	STACK_ELEM_TP top;
+	STACK_ELEM_TP head;
 	int depth;
 	int size;
 };
 
-typedef struct stack stack;
-typedef struct stack* stack_p;
+typedef struct STACK STACK_T;
+typedef struct STACK* STACK_TP;
 
-stack_p stack_init();
+void stack_init(STACK_TP* stack_p);
 
-void stack_push(stack_p stack, int to_push);
+void stack_push(STACK_TP stack, int to_push);
 
-stack_elem_p stack_pop(stack_p stack);
+STACK_ELEM_TP stack_pop(STACK_TP stack);
 
-stack_elem_p stack_top(stack_p stack);
+STACK_ELEM_TP stack_top(STACK_TP stack);
 
-int stack_depth(stack_p stack);
+int stack_depth(STACK_TP stack);
 
-int stack_is_empty(stack_p stack);
+int stack_is_empty(STACK_TP stack);
 
 void stack_destroy();
 

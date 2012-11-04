@@ -575,7 +575,7 @@ static void nfa_reform_one_or_more(NFA_TP nfa_reform_result, NFA_TP nfa) {
 	inner_nfa_match_to_start_trans->trans_prior = NULL;
 	inner_nfa_match_to_start_trans->trans_next =
 			inner_nfa_match_to_result_match_trans = (NFA_TRANS_TP) malloc(
-					sizoef(NFA_TRANS_T));
+					sizeof(NFA_TRANS_T));
 
 	inner_nfa_match_to_result_match_trans->state_from = nfa->nfa_match;
 	inner_nfa_match_to_result_match_trans->state_to = result_match_state;
