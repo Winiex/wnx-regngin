@@ -9,7 +9,8 @@
 #define STACK_H_
 
 struct STACK_ELEM {
-	int elem;
+	int int_elem;
+	void* pointer_elem;
 };
 
 typedef struct STACK_ELEM STACK_ELEM_T;
@@ -28,11 +29,23 @@ typedef struct STACK* STACK_TP;
 
 void stack_init(STACK_TP* stack_p);
 
-void stack_push(STACK_TP stack, int to_push);
+void stack_push_int(STACK_TP stack, int to_push);
 
-STACK_ELEM_TP stack_pop(STACK_TP stack);
+void stack_push_pointer(STACK_TP stack, void* pointer);
 
-STACK_ELEM_TP stack_top(STACK_TP stack);
+void stack_push_elem(STACK_TP stack, STACK_ELEM_TP elem);
+
+int stack_pop_int(STACK_TP stack);
+
+void* stack_pop_pointer(STACK_TP stack);
+
+STACK_ELEM_TP stack_pop_elem(STACK_TP stack);
+
+int stack_top_int(STACK_TP stack);
+
+void* stack_top_pointer(STACK_TP stack);
+
+STACK_ELEM_TP stack_top_elem(STACK_TP stack);
 
 int stack_depth(STACK_TP stack);
 

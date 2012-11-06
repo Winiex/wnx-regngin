@@ -70,12 +70,14 @@ struct NFA {
 
 void nfa_regex_to_nfa(char* regex, NFA_TP* nfa_p);
 
-void nfa_regex_postfix_to_nfa(char* regex_post, NFA_TP* nfa_p);
+void nfa_regex_postfix_to_nfa(char* regex_postfix, NFA_TP* nfa_p);
 
 void nfa_construct_char_nfa(char char_elem, NFA_TP* nfa_p);
 
 void nfa_construct_metachar_nfa(char meta_char_elem, NFA_TP* meta_nfa,
 		NFA_TP nfa1, NFA_TP nfa2);
+
+void nfa_destroy(NFA_TP* nfa_p);
 
 static void nfa_reform_or(NFA_TP nfa_reform_result, NFA_TP nfa1, NFA_TP nfa2);
 

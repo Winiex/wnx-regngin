@@ -7,14 +7,79 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include "stack.h"
 #include "nfa.h"
+#include "regex.h"
 
 void nfa_regex_to_nfa(char* regex, NFA_TP* nfa_p) {
+	int regex_memory_size = -1;
+	char* regex_infix_with_cat;
+	char* regex_postfix;
 
+	//首先获取 regex 的 postfix 形式 regex_postfix
+	regex_memory_size = regex_measure_regex_memory_size(regex);
+	regex_infix_with_cat = (char *) malloc(regex_memory_size * sizeof(char));
+	regex_postfix = (char *) malloc(regex_memory_size * sizeof(char));
+	regex_insert_cat_char(regex, regex_infix_with_cat);
+	regex_infix_to_postfix(regex_infix_with_cat, regex_postfix);
+
+	//创建 nfa
+	nfa_regex_postfix_to_nfa(regex_postfix, nfa_p);
+
+	free(regex_infix_with_cat);
+	free(regex_postfix);
 }
 
-void nfa_regex_postfix_to_nfa(char* regex_post, NFA_TP* nfa_p) {
+void nfa_regex_postfix_to_nfa(char* regex_postfix, NFA_TP* nfa_p) {
+	char current_char;
+	int counter = 0, str_length;
+	NFA_TP char_nfa, meta_nfa, nfa1, nfa2;
+	STACK_TP nfa_stack;
 
+	str_length = strlen(regex_postfix);
+	stack_init(&nfa_stack);
+
+	for (; counter < str_length; counter++) {
+		current_char = regex_postfix[counter];
+
+		if (regex_is_char_or_number(current_char)) {
+			nfa_construct_char_nfa(current_char, &char_nfa);
+			stack_push_pointer(nfa_stack, char_nfa);
+		} else {
+			switch (current_char) {
+			case '|':
+				nfa1 = (NFA_TP) stack_pop_pointer(nfa_stack);
+				nfa2 = (NFA_TP) stack_pop_pointer(nfa_stack);
+				nfa_construct_metachar_nfa('|', &meta_nfa, nfa1, nfa2);
+				stack_push_pointer(nfa_stack, meta_nfa);
+				break;
+			case '*':
+				nfa1 = (NFA_TP) stack_pop_pointer(nfa_stack);
+				nfa_construct_metachar_nfa('*', &meta_nfa, nfa1, NULL );
+				stack_push_pointer(nfa_stack, meta_nfa);
+				break;
+			case '?':
+				nfa1 = (NFA_TP) stack_pop_pointer(nfa_stack);
+				nfa_construct_metachar_nfa('?', &meta_nfa, nfa1, NULL );
+				stack_push_pointer(nfa_stack, meta_nfa);
+				break;
+			case '&':
+				nfa1 = (NFA_TP) stack_pop_pointer(nfa_stack);
+				nfa2 = (NFA_TP) stack_pop_pointer(nfa_stack);
+				nfa_construct_metachar_nfa('&', &meta_nfa, nfa1, nfa2);
+				stack_push_pointer(nfa_stack, meta_nfa);
+				break;
+			case '+':
+				nfa1 = (NFA_TP) stack_pop_pointer(nfa_stack);
+				nfa_construct_metachar_nfa('+', &meta_nfa, nfa1, NULL );
+				stack_push_pointer(nfa_stack, meta_nfa);
+				break;
+			}
+		}
+	}
+
+	(*nfa_p) = (NFA_TP) stack_pop_pointer(nfa_stack);
+	stack_destroy(&nfa_stack);
 }
 
 void nfa_construct_char_nfa(char char_elem, NFA_TP* nfa_p) {
@@ -22,7 +87,7 @@ void nfa_construct_char_nfa(char char_elem, NFA_TP* nfa_p) {
 	NFA_TRANS_TP trans_char_elem;
 	NFA_TP nfa;
 
-	nfa = (*nfa_p) = (NFA_TP) malloc(sizeof(NFA_T));
+	nfa = (NFA_TP) malloc(sizeof(NFA_T));
 
 	start_state = (NFA_STATE_TP) malloc(sizeof(NFA_STATE_T));
 	match_state = (NFA_STATE_TP) malloc(sizeof(NFA_STATE_T));
@@ -67,6 +132,8 @@ void nfa_construct_char_nfa(char char_elem, NFA_TP* nfa_p) {
 	nfa->nfa_match = match_state;
 	nfa->nfa_type = NFA_TYPE_CHAR;
 	nfa->state_count = 2;
+
+	(*nfa_p) = nfa;
 }
 
 void nfa_construct_metachar_nfa(char meta_char_elem, NFA_TP* meta_nfa,
@@ -93,6 +160,10 @@ void nfa_construct_metachar_nfa(char meta_char_elem, NFA_TP* meta_nfa,
 		fprintf(stderr, "meta_char_elem WRONG!");
 		break;
 	}
+}
+
+void nfa_destroy(NFA_TP* nfa_p) {
+
 }
 
 static void nfa_reform_or(NFA_TP nfa_reform_result, NFA_TP nfa1, NFA_TP nfa2) {
