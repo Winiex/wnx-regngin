@@ -8,6 +8,13 @@
 #ifndef NFA_H_
 #define NFA_H_
 
+#include <stdlib.h>
+#include <stdio.h>
+#include "regex.h"
+#include "list.h"
+#include "queue.h"
+#include "stack.h"
+
 #define NULL_CHAR -1
 
 struct NFA_STATE;
@@ -42,6 +49,7 @@ typedef enum {
 } NFA_TYPE_T;
 
 struct NFA_STATE {
+	int state_code;
 	NFA_STATE_TYPE_T state_type;
 	NFA_TRANS_TP trans_in_head;
 	NFA_TRANS_TP trans_out_head;
@@ -77,7 +85,19 @@ void nfa_construct_char_nfa(char char_elem, NFA_TP* nfa_p);
 void nfa_construct_metachar_nfa(char meta_char_elem, NFA_TP* meta_nfa,
 		NFA_TP nfa1, NFA_TP nfa2);
 
+LIST_TP nfa_state_closure(NFA_STATE_TP state);
+
+LIST_TP nfa_state_closure_by_char(NFA_STATE_TP state, char char_param);
+
+LIST_TP nfa_state_set_closure(LIST_TP state_set);
+
+LIST_TP nfa_state_move(NFA_STATE_TP state, char move_char);
+
+LIST_TP nfa_state_set_move(LIST_TP state_set, char move_char);
+
 void nfa_destroy(NFA_TP* nfa_p);
+
+static void nfa_remove_nfa_states_duplicates(LIST_TP states_head);
 
 static void nfa_reform_or(NFA_TP nfa_reform_result, NFA_TP nfa1, NFA_TP nfa2);
 

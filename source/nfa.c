@@ -5,11 +5,7 @@
  *      Author: winiex
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include "stack.h"
 #include "nfa.h"
-#include "regex.h"
 
 void nfa_regex_to_nfa(char* regex, NFA_TP* nfa_p) {
 	int regex_memory_size = -1;
@@ -134,6 +130,10 @@ void nfa_construct_char_nfa(char char_elem, NFA_TP* nfa_p) {
 	nfa->state_count = 2;
 
 	(*nfa_p) = nfa;
+
+	//处理各个 state 的 state_code
+	start_state->state_code = 0;
+	match_state->state_code = 1;
 }
 
 void nfa_construct_metachar_nfa(char meta_char_elem, NFA_TP* meta_nfa,
@@ -162,12 +162,155 @@ void nfa_construct_metachar_nfa(char meta_char_elem, NFA_TP* meta_nfa,
 	}
 }
 
+LIST_TP nfa_state_closure(NFA_STATE_TP state) {
+	return nfa_state_closure_by_char(state, NULL_CHAR);
+}
+
+LIST_TP nfa_state_closure_by_char(NFA_STATE_TP state, char char_param) {
+	NFA_STATE_TP state_cursor1, state_cursor2;
+	NFA_TRANS_TP trans_cursor;
+	QUEUE_TP state_queue;
+	LIST_TP state_result_list;
+	int state_visited[1000], counter;
+
+	for (counter = 0; counter < 1000; counter++) {
+		state_visited[counter] = 0;
+	}
+
+	list_init(&state_result_list);
+	queue_init(&state_queue);
+
+	//使用广度优先遍历的方式来找到 state 经过空转换能够达到的所有状态
+	queue_enqueue_pointer(state_queue, state);
+	list_add_pointer(state_result_list, state);
+	state_visited[state->state_code] = 1;
+
+	while (!queue_is_empty(state_queue)) {
+		state_cursor1 = (NFA_STATE_TP) queue_dequeue_pointer(state_queue);
+		trans_cursor = state_cursor1->trans_out_head;
+		state_visited[state_cursor1->state_code] = 1;
+
+		for (; trans_cursor != NULL ; trans_cursor = trans_cursor->trans_next) {
+			if (trans_cursor->trans_char == char_param
+					&& !state_visited[trans_cursor->state_to->state_code]) {
+				state_cursor2 = trans_cursor->state_to;
+				queue_enqueue_pointer(state_queue, state_cursor2);
+				list_add_pointer(state_result_list, state_cursor2);
+				state_visited[state_cursor2->state_code] = 1;
+			}
+		}
+	}
+
+	return state_result_list;
+}
+
+LIST_TP nfa_state_set_closure(LIST_TP state_set) {
+	NFA_STATE_TP state_cursor;
+	LIST_TP list_result, list_cursor, list_cat_cursor;
+	LIST_ELEM_TP list_elem_cursor;
+
+	list_elem_cursor = state_set->list_head;
+	state_cursor = (NFA_STATE_TP) list_elem_cursor->pointer_elem;
+	list_cat_cursor = nfa_state_closure(state_cursor);
+
+	list_elem_cursor = list_elem_cursor->next;
+
+	for (; list_elem_cursor != NULL ; list_elem_cursor =
+			list_elem_cursor->next) {
+
+		state_cursor = (NFA_STATE_TP) list_elem_cursor->pointer_elem;
+		list_cursor = nfa_state_closure(state_cursor);
+
+		list_cat_cursor->list_tail->next = list_cursor->list_head;
+		list_cursor->list_head->prior = list_cat_cursor->list_tail;
+
+		list_cat_cursor = list_cat(list_cat_cursor, list_cursor);
+
+		// 这里的状态会存在重复的，需要做一个集合去除重复元素的函数
+		if (list_cat_cursor != NULL && list_cat_cursor->list_size != 0) {
+			nfa_remove_nfa_states_duplicates(list_cat_cursor);
+		}
+	}
+
+	list_result = list_cat_cursor;
+
+	return list_result;
+}
+
+LIST_TP nfa_state_move(NFA_STATE_TP state, char move_char) {
+	LIST_TP move_to_states_list = NULL;
+	NFA_TRANS_TP trans_cursor;
+
+	list_init(&move_to_states_list);
+
+	trans_cursor = state->trans_out_head;
+
+	for (; trans_cursor != NULL ; trans_cursor = trans_cursor->trans_next) {
+		if (trans_cursor->trans_char == move_char) {
+			list_add_pointer(move_to_states_list, trans_cursor->state_to);
+		}
+	}
+
+	return move_to_states_list;
+}
+
+LIST_TP nfa_state_set_move(LIST_TP state_set, char move_char) {
+	LIST_TP list_result, list_cursor, list_cat_cursor;
+	LIST_ELEM_TP list_elem_cursor;
+	NFA_STATE_TP state_cursor;
+
+	list_elem_cursor = state_set->list_head;
+	state_cursor = (NFA_STATE_TP) list_elem_cursor->pointer_elem;
+	list_cat_cursor = nfa_state_move(state_cursor, move_char);
+
+	list_elem_cursor = list_elem_cursor->next;
+
+	for (; list_elem_cursor != NULL ; list_elem_cursor =
+			list_elem_cursor->next) {
+		state_cursor = (NFA_STATE_TP) list_elem_cursor->pointer_elem;
+		list_cursor = nfa_state_move(state_cursor, move_char);
+
+		list_cat_cursor = list_cat(list_cat_cursor, list_cursor);
+
+		// 这里的状态会存在重复的，需要做一个集合去除重复元素的函数
+		if (list_cat_cursor != NULL && list_cat_cursor->list_size != 0) {
+			nfa_remove_nfa_states_duplicates(list_cat_cursor);
+		}
+	}
+
+	list_result = list_cat_cursor;
+
+	return list_result;
+}
+
 void nfa_destroy(NFA_TP* nfa_p) {
 
 }
 
+static void nfa_remove_nfa_states_duplicates(LIST_TP states_list) {
+	LIST_ELEM_TP current_elem, inner_elem;
+	NFA_STATE_TP current_state, inner_state;
+	int current_state_code;
+
+	current_elem = states_list->list_head;
+
+	for (; current_elem != NULL ; current_elem = current_elem->next) {
+		current_state = (NFA_STATE_TP) current_elem->pointer_elem;
+		current_state_code = current_state->state_code;
+
+		for (inner_elem = current_elem->next; inner_elem != NULL ; inner_elem =
+				inner_elem->next) {
+			inner_state = (NFA_STATE_TP) inner_elem->pointer_elem;
+			if (inner_state->state_code == current_state_code) {
+				list_delete_elem(states_list, inner_elem);
+			}
+		}
+	}
+}
+
 static void nfa_reform_or(NFA_TP nfa_reform_result, NFA_TP nfa1, NFA_TP nfa2) {
-	NFA_STATE_TP result_start_state, result_match_state;
+	int state_code_counter;
+	NFA_STATE_TP result_start_state, result_match_state, state_cursor;
 	NFA_TRANS_TP result_start_to_nfa1_trans, result_start_to_nfa2_trans,
 			nfa1_match_to_result_match_trans, nfa2_match_to_result_match_trans;
 
@@ -286,10 +429,19 @@ static void nfa_reform_or(NFA_TP nfa_reform_result, NFA_TP nfa1, NFA_TP nfa2) {
 	nfa_reform_result->nfa_states_head = result_start_state;
 	nfa_reform_result->nfa_type = NFA_TYPE_OR;
 	nfa_reform_result->state_count = nfa1->state_count + nfa2->state_count + 2;
+
+	//处理各个 state 的 state_code
+	state_cursor = nfa_reform_result->nfa_states_head;
+	state_code_counter = 0;
+	for (; state_cursor != NULL ; state_cursor = state_cursor->state_next) {
+		state_cursor->state_code = state_code_counter;
+		state_code_counter++;
+	}
 }
 
 static void nfa_reform_closure(NFA_TP nfa_reform_result, NFA_TP nfa) {
-	NFA_STATE_TP result_start_state, result_match_state;
+	int state_code_counter;
+	NFA_STATE_TP result_start_state, result_match_state, state_cursor;
 	NFA_TRANS_TP result_start_to_inner_nfa_trans,
 			inner_nfa_match_to_start_trans, result_inner_nfa_to_match_trans,
 			result_start_to_match_trans;
@@ -393,10 +545,19 @@ static void nfa_reform_closure(NFA_TP nfa_reform_result, NFA_TP nfa) {
 	nfa_reform_result->nfa_states_head = result_start_state;
 	nfa_reform_result->nfa_type = NFA_TYPE_CLOSURE;
 	nfa_reform_result->state_count = nfa->state_count + 2;
+
+	//处理各个 state 的 state_code
+	state_cursor = nfa_reform_result->nfa_states_head;
+	state_code_counter = 0;
+	for (; state_cursor != NULL ; state_cursor = state_cursor->state_next) {
+		state_cursor->state_code = state_code_counter;
+		state_code_counter++;
+	}
 }
 
 static void nfa_reform_one_or_none(NFA_TP nfa_reform_result, NFA_TP nfa) {
-	NFA_STATE_TP result_start_state, result_match_state;
+	int state_code_counter;
+	NFA_STATE_TP result_start_state, result_match_state, state_cursor;
 	NFA_TRANS_TP result_start_to_inner_nfa_trans, result_start_to_match_trans,
 			result_inner_nfa_to_match_trans;
 
@@ -482,10 +643,19 @@ static void nfa_reform_one_or_none(NFA_TP nfa_reform_result, NFA_TP nfa) {
 	nfa_reform_result->nfa_states_head = result_start_state;
 	nfa_reform_result->nfa_type = NFA_TYPE_ONE_OR_NONE;
 	nfa_reform_result->state_count = nfa->state_count + 2;
+
+	//处理各个 state 的 state_code
+	state_cursor = nfa_reform_result->nfa_states_head;
+	state_code_counter = 0;
+	for (; state_cursor != NULL ; state_cursor = state_cursor->state_next) {
+		state_cursor->state_code = state_code_counter;
+		state_code_counter++;
+	}
 }
 
 static void nfa_reform_cat(NFA_TP nfa_reform_result, NFA_TP nfa1, NFA_TP nfa2) {
-	NFA_STATE_TP result_start_state, result_match_state;
+	int state_code_counter;
+	NFA_STATE_TP result_start_state, result_match_state, state_cursor;
 	NFA_TRANS_TP result_start_to_inner_nfa1_trans,
 			nfa1_match_to_nfa2_start_trans, inner_nfa2_to_result_match_trans;
 
@@ -589,10 +759,19 @@ static void nfa_reform_cat(NFA_TP nfa_reform_result, NFA_TP nfa1, NFA_TP nfa2) {
 	nfa_reform_result->nfa_states_head = result_start_state;
 	nfa_reform_result->nfa_type = NFA_TYPE_CAT;
 	nfa_reform_result->state_count = nfa1->state_count + nfa2->state_count + 2;
+
+	//处理各个 state 的 state_code
+	state_cursor = nfa_reform_result->nfa_states_head;
+	state_code_counter = 0;
+	for (; state_cursor != NULL ; state_cursor = state_cursor->state_next) {
+		state_cursor->state_code = state_code_counter;
+		state_code_counter++;
+	}
 }
 
 static void nfa_reform_one_or_more(NFA_TP nfa_reform_result, NFA_TP nfa) {
-	NFA_STATE_TP result_start_state, result_match_state;
+	int state_code_counter;
+	NFA_STATE_TP result_start_state, result_match_state, state_cursor;
 	NFA_TRANS_TP result_start_to_inner_nfa_start_trans,
 			inner_nfa_match_to_start_trans,
 			inner_nfa_match_to_result_match_trans;
@@ -683,4 +862,12 @@ static void nfa_reform_one_or_more(NFA_TP nfa_reform_result, NFA_TP nfa) {
 	nfa_reform_result->nfa_states_head = result_start_state;
 	nfa_reform_result->nfa_type = NFA_TYPE_ONE_OR_MORE;
 	nfa_reform_result->state_count = nfa->state_count + 2;
+
+	//处理各个 state 的 state_code
+	state_cursor = nfa_reform_result->nfa_states_head;
+	state_code_counter = 0;
+	for (; state_cursor != NULL ; state_cursor = state_cursor->state_next) {
+		state_cursor->state_code = state_code_counter;
+		state_code_counter++;
+	}
 }

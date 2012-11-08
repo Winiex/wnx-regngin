@@ -14,20 +14,26 @@
 #include "regex.h"
 #include "nfa.h"
 
-static void test_consctuct_nfa();
+void test_consctuct_nfa();
 
 int main(void) {
 
-	char* regex = "(a|b*)";
-	char* regex2 = "(a|b*)(cd|a)";
-	char* regex3 = "a(a|b*)cd(ac*|d)";
+	char* regex = "(aaaa|aaaa)";
 	NFA_TP nfa;
-	nfa_regex_to_nfa(regex3, &nfa);
+	NFA_STATE_TP state;
+	LIST_TP list;
+	LIST_TP list_move_to;
+
+	nfa_regex_to_nfa(regex, &nfa);
+	state = nfa->nfa_start;
+
+	list = nfa_state_closure(state);
+	list_move_to = nfa_state_set_move(list, 'a');
 
 	return EXIT_SUCCESS;
 }
 
-static void test_consctuct_nfa() {
+void test_consctuct_nfa() {
 	char nfa_char_a = 'a', nfa_char_b = 'b';
 	NFA_TP char_nfa_a, char_nfa_b, or_nfa, closure_nfa;
 
