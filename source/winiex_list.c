@@ -5,8 +5,7 @@
  *      Author: winiex
  */
 
-#include <stdlib.h>
-#include "list.h"
+#include "winiex_list.h"
 
 void list_init(LIST_TP* list) {
 	(*list) = (LIST_TP) malloc(sizeof(LIST_T));

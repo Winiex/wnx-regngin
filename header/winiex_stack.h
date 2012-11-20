@@ -5,8 +5,11 @@
  *      Author: winiex
  */
 
-#ifndef STACK_H_
-#define STACK_H_
+#ifndef WINIEX_STACK_H_
+#define WINIEX_STACK_H_
+
+#include <stdlib.h>
+#include <stdio.h>
 
 struct STACK_ELEM {
 	int int_elem;

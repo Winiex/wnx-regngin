@@ -5,9 +5,7 @@
  *      Author: winiex
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include "stack.h"
+#include "winiex_stack.h"
 
 void stack_init(STACK_TP* stack_p) {
 	STACK_TP stack = (STACK_TP) malloc(sizeof(STACK_T));

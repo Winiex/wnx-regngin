@@ -5,8 +5,11 @@
  *      Author: winiex
  */
 
-#ifndef QUEUE_H_
-#define QUEUE_H_
+#ifndef WINIEX_QUEUE_H_
+#define WINIEX_QUEUE_H_
+
+#include <stdlib.h>
+#include <stdio.h>
 
 #define QUEUE_SIZE 1000
 

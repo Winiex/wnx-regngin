@@ -5,8 +5,10 @@
  *      Author: winiex
  */
 
-#ifndef LIST_H_
-#define LIST_H_
+#ifndef WINIEX_LIST_H_
+#define WINIEX_LIST_H_
+
+#include <stdlib.h>
 
 struct list_elem {
 	int int_elem;

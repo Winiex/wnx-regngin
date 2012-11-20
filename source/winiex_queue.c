@@ -5,9 +5,7 @@
  *      Author: winiex
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include "queue.h"
+#include "winiex_queue.h"
 
 void queue_init(QUEUE_TP* queue) {
 	(*queue) = (QUEUE_TP) malloc(sizeof(QUEUE_T));

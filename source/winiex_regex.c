@@ -5,9 +5,36 @@
  *      Author: winiex
  */
 
-#include <string.h>
-#include "regex.h"
-#include "stack.h"
+#include "winiex_regex.h"
+
+LIST_TP regex_get_char_set(char *regex) {
+	LIST_TP char_set;
+	LIST_ELEM_TP list_cursor, inner_cursor;
+	int regex_length, counter, current_char;
+
+	regex_length = strlen(regex);
+	list_init(&char_set);
+
+	for (counter = 0; counter < regex_length; counter++) {
+		if (regex_is_char_or_number(regex[counter])) {
+			list_add_int(char_set, regex[counter]);
+		}
+	}
+
+	list_cursor = char_set->list_head;
+
+	for (; list_cursor != NULL ; list_cursor = list_cursor->next) {
+		current_char = list_cursor->int_elem;
+		for (inner_cursor = list_cursor->next; inner_cursor != NULL ;
+				inner_cursor = inner_cursor->next) {
+			if (inner_cursor->int_elem == current_char) {
+				list_delete_elem(char_set, inner_cursor);
+			}
+		}
+	}
+
+	return char_set;
+}
 
 void regex_infix_to_postfix(char* regex_infix, char* regex_postfix) {
 	int counter, postfix_fill_in_index = 0;
@@ -100,6 +127,20 @@ void regex_insert_cat_char(char* regex_infix, char* regex_infix_with_cat_char) {
 				|| (former_char == ')' && regex_is_char_or_number(current_char))
 				|| (regex_is_char_or_number(former_char) && current_char == '(')
 				|| (former_char == ')' && current_char == '(')) {
+			regex_infix_with_cat_char[cat_char_index] = '&';
+			cat_char_index++;
+			regex_infix_with_cat_char[cat_char_index] = current_char;
+			cat_char_index++;
+		} else if ((former_char == '*' && regex_is_char_or_number(current_char))
+				|| (former_char == '+' && regex_is_char_or_number(current_char))
+				|| (former_char == '?' && regex_is_char_or_number(current_char))) {
+			regex_infix_with_cat_char[cat_char_index] = '&';
+			cat_char_index++;
+			regex_infix_with_cat_char[cat_char_index] = current_char;
+			cat_char_index++;
+		} else if ((former_char == '*' && current_char == '(')
+				|| (former_char == '+' && current_char == '(')
+				|| (former_char == '?' && current_char == '(')) {
 			regex_infix_with_cat_char[cat_char_index] = '&';
 			cat_char_index++;
 			regex_infix_with_cat_char[cat_char_index] = current_char;

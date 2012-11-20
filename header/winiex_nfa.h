@@ -5,15 +5,15 @@
  *      Author: winiex
  */
 
-#ifndef NFA_H_
-#define NFA_H_
+#ifndef WINIEX_NFA_H_
+#define WINIEX_NFA_H_
 
 #include <stdlib.h>
 #include <stdio.h>
 #include "regex.h"
-#include "list.h"
-#include "queue.h"
-#include "stack.h"
+#include "winiex_list.h"
+#include "winiex_queue.h"
+#include "winiex_stack.h"
 
 #define NULL_CHAR -1
 
@@ -31,7 +31,7 @@ typedef struct NFA NFA_T;
 typedef struct NFA* NFA_TP;
 
 typedef enum {
-	STATE_TYPE_START, STATE_TYPE_MATCH, STATE_TYPE_TRANS
+	NFA_STATE_TYPE_START, NFA_STATE_TYPE_MATCH, NFA_STATE_TYPE_TRANS
 } NFA_STATE_TYPE_T;
 
 typedef enum {
@@ -74,6 +74,7 @@ struct NFA {
 	NFA_STATE_TP nfa_start;
 	NFA_STATE_TP nfa_match;
 	NFA_TYPE_T nfa_type;
+	LIST_TP char_set;
 };
 
 void nfa_regex_to_nfa(char* regex, NFA_TP* nfa_p);

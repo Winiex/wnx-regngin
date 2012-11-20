@@ -5,12 +5,18 @@
  *      Author: winiex
  */
 
-#ifndef REGEX_H_
-#define REGEX_H_
+#ifndef WINIEX_REGEX_H_
+#define WINIEX_REGEX_H_
+
+#include <string.h>
+#include "winiex_stack.h"
+#include "winiex_list.h"
 
 typedef enum {
 	ATERISK, BAR, QUESTION, PARENLEFT, PARENRIGHT, CONCAT
 } REGEX_OPER_T;
+
+LIST_TP regex_get_char_set(char *regex);
 
 void regex_insert_cat_char(char* regex_infix, char* regex_infix_with_cat_char);
 

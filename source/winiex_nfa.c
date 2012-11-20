@@ -5,12 +5,13 @@
  *      Author: winiex
  */
 
-#include "nfa.h"
+#include "winiex_nfa.h"
 
 void nfa_regex_to_nfa(char* regex, NFA_TP* nfa_p) {
 	int regex_memory_size = -1;
 	char* regex_infix_with_cat;
 	char* regex_postfix;
+	LIST_TP char_set;
 
 	//首先获取 regex 的 postfix 形式 regex_postfix
 	regex_memory_size = regex_measure_regex_memory_size(regex);
@@ -21,6 +22,9 @@ void nfa_regex_to_nfa(char* regex, NFA_TP* nfa_p) {
 
 	//创建 nfa
 	nfa_regex_postfix_to_nfa(regex_postfix, nfa_p);
+
+	char_set = regex_get_char_set(regex);
+	(*nfa_p)->char_set = char_set;
 
 	free(regex_infix_with_cat);
 	free(regex_postfix);
@@ -88,10 +92,10 @@ void nfa_construct_char_nfa(char char_elem, NFA_TP* nfa_p) {
 	start_state = (NFA_STATE_TP) malloc(sizeof(NFA_STATE_T));
 	match_state = (NFA_STATE_TP) malloc(sizeof(NFA_STATE_T));
 
-	start_state->state_type = STATE_TYPE_START;
+	start_state->state_type = NFA_STATE_TYPE_START;
 	start_state->trans_in_head = NULL;
 
-	match_state->state_type = STATE_TYPE_MATCH;
+	match_state->state_type = NFA_STATE_TYPE_MATCH;
 	match_state->trans_out_head = NULL;
 
 	//为 start_state 构建 trans_out_head
@@ -317,10 +321,10 @@ static void nfa_reform_or(NFA_TP nfa_reform_result, NFA_TP nfa1, NFA_TP nfa2) {
 	result_start_state = (NFA_STATE_TP) malloc(sizeof(NFA_STATE_T));
 	result_match_state = (NFA_STATE_TP) malloc(sizeof(NFA_STATE_T));
 
-	result_start_state->state_type = STATE_TYPE_START;
+	result_start_state->state_type = NFA_STATE_TYPE_START;
 	result_start_state->trans_in_head = NULL;
 
-	result_match_state->state_type = STATE_TYPE_MATCH;
+	result_match_state->state_type = NFA_STATE_TYPE_MATCH;
 	result_match_state->trans_out_head = NULL;
 
 	//为 result_start_state 构建 trans_out_head
@@ -449,10 +453,10 @@ static void nfa_reform_closure(NFA_TP nfa_reform_result, NFA_TP nfa) {
 	result_start_state = (NFA_STATE_TP) malloc(sizeof(NFA_STATE_T));
 	result_match_state = (NFA_STATE_TP) malloc(sizeof(NFA_STATE_T));
 
-	result_start_state->state_type = STATE_TYPE_START;
+	result_start_state->state_type = NFA_STATE_TYPE_START;
 	result_start_state->trans_in_head = NULL;
 
-	result_match_state->state_type = STATE_TYPE_MATCH;
+	result_match_state->state_type = NFA_STATE_TYPE_MATCH;
 	result_match_state->trans_out_head = NULL;
 
 	//为 result_start_state 构建 trans_out_head
@@ -564,10 +568,10 @@ static void nfa_reform_one_or_none(NFA_TP nfa_reform_result, NFA_TP nfa) {
 	result_start_state = (NFA_STATE_TP) malloc(sizeof(NFA_STATE_T));
 	result_match_state = (NFA_STATE_TP) malloc(sizeof(NFA_STATE_T));
 
-	result_start_state->state_type = STATE_TYPE_START;
+	result_start_state->state_type = NFA_STATE_TYPE_START;
 	result_start_state->trans_in_head = NULL;
 
-	result_match_state->state_type = STATE_TYPE_MATCH;
+	result_match_state->state_type = NFA_STATE_TYPE_MATCH;
 	result_match_state->trans_out_head = NULL;
 
 	//为 result_start_state 构建 trans_out_head
@@ -662,10 +666,10 @@ static void nfa_reform_cat(NFA_TP nfa_reform_result, NFA_TP nfa1, NFA_TP nfa2) {
 	result_start_state = (NFA_STATE_TP) malloc(sizeof(NFA_STATE_T));
 	result_match_state = (NFA_STATE_TP) malloc(sizeof(NFA_STATE_T));
 
-	result_start_state->state_type = STATE_TYPE_START;
+	result_start_state->state_type = NFA_STATE_TYPE_START;
 	result_start_state->trans_in_head = NULL;
 
-	result_match_state->state_type = STATE_TYPE_MATCH;
+	result_match_state->state_type = NFA_STATE_TYPE_MATCH;
 	result_match_state->trans_out_head = NULL;
 
 	//为 result_start_state 构建 trans_out_head
@@ -780,10 +784,10 @@ static void nfa_reform_one_or_more(NFA_TP nfa_reform_result, NFA_TP nfa) {
 	result_match_state = (NFA_STATE_TP) malloc(sizeof(NFA_STATE_T));
 
 	result_start_state->trans_in_head = NULL;
-	result_start_state->state_type = STATE_TYPE_START;
+	result_start_state->state_type = NFA_STATE_TYPE_START;
 
 	result_match_state->trans_out_head = NULL;
-	result_match_state->state_type = STATE_TYPE_MATCH;
+	result_match_state->state_type = NFA_STATE_TYPE_MATCH;
 
 	//为 result_start_state 构建 trans_out_head
 	result_start_to_inner_nfa_start_trans = (NFA_TRANS_TP) malloc(
