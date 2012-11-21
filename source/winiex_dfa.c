@@ -9,7 +9,7 @@
 
 void dfa_construct_from_nfa(NFA_TP nfa, DFA_TP* dfa_p) {
 	DFA_STATE_TP dfa_state_start, dfa_state_match, dfa_state_cursor,
-			new_state_cursor, dfa_state_cmp_cursor, dfa_state_equal,
+			new_state_cursor, dfa_state_cmp_cursor, dfa_state_equal = NULL,
 			current_state, state_code_cursor;
 	LIST_TP nfa_state_closure_list, nfa_state_move, dfa_state_cmp_list_cursor;
 	LIST_ELEM_TP trans_char_cursor, find_match_state_cursor;
@@ -31,7 +31,7 @@ void dfa_construct_from_nfa(NFA_TP nfa, DFA_TP* dfa_p) {
 	dfa_state_cursor->state_type = DFA_STATE_TYPE_START;
 	dfa_state_cursor->state_prior = NULL;
 	dfa_state_cursor->state_next = NULL;
-	dfa_state_cursor->trans_in = NULL;
+	dfa_state_cursor->trans_in_head = NULL;
 
 	queue_enqueue_pointer(state_set_queue, dfa_state_cursor);
 
@@ -54,10 +54,8 @@ void dfa_construct_from_nfa(NFA_TP nfa, DFA_TP* dfa_p) {
 			}
 		}
 
-		//当已经是 match state 时，无须再做操作
 		if (dfa_state_match == current_state) {
 			current_state->state_type = DFA_STATE_TYPE_MATCH;
-			break;
 		}
 
 		for (; trans_char_cursor != NULL ;
@@ -82,8 +80,6 @@ void dfa_construct_from_nfa(NFA_TP nfa, DFA_TP* dfa_p) {
 				if (dfa_states_equal(dfa_state_cmp_list_cursor,
 						nfa_state_move)) {
 					dfa_state_equal = dfa_state_cmp_cursor;
-				} else {
-					dfa_state_equal = NULL;
 				}
 			}
 
@@ -104,15 +100,28 @@ void dfa_construct_from_nfa(NFA_TP nfa, DFA_TP* dfa_p) {
 				trans_cursor->state_from = current_state;
 				trans_cursor->state_to = dfa_state_cursor;
 				trans_cursor->trans_char = trans_char;
+				trans_cursor->trans_next = current_state->trans_out_head;
+				trans_cursor->trans_prior = NULL;
 
-				current_state->trans_out = trans_cursor;
+				if (current_state->trans_out_head != NULL ) {
+					current_state->trans_out_head->trans_prior = trans_cursor;
+				}
+
+				current_state->trans_out_head = trans_cursor;
 
 				trans_cursor = (DFA_TRANS_TP) malloc(sizeof(DFA_TRANS_T));
 				trans_cursor->state_from = current_state;
 				trans_cursor->state_to = dfa_state_cursor;
 				trans_cursor->trans_char = trans_char;
+				trans_cursor->trans_next = dfa_state_cursor->trans_out_head;
+				trans_cursor->trans_prior = NULL;
 
-				dfa_state_cursor->trans_in = trans_cursor;
+				if (dfa_state_cursor->trans_out_head != NULL ) {
+					dfa_state_cursor->trans_out_head->trans_prior =
+							trans_cursor;
+				}
+
+				dfa_state_cursor->trans_in_head = trans_cursor;
 				state_counter++;
 				queue_enqueue_pointer(state_set_queue, dfa_state_cursor);
 			} else {
@@ -121,15 +130,28 @@ void dfa_construct_from_nfa(NFA_TP nfa, DFA_TP* dfa_p) {
 				trans_cursor->state_from = current_state;
 				trans_cursor->state_to = dfa_state_equal;
 				trans_cursor->trans_char = trans_char;
+				trans_cursor->trans_next = current_state->trans_out_head;
+				trans_cursor->trans_prior = NULL;
 
-				current_state->trans_out = trans_cursor;
+				if (current_state->trans_out_head != NULL ) {
+					current_state->trans_out_head->trans_prior = trans_cursor;
+				}
+
+				current_state->trans_out_head = trans_cursor;
 
 				trans_cursor = (DFA_TRANS_TP) malloc(sizeof(DFA_TRANS_T));
 				trans_cursor->state_from = current_state;
 				trans_cursor->state_to = dfa_state_equal;
 				trans_cursor->trans_char = trans_char;
+				trans_cursor->trans_next = dfa_state_cursor->trans_out_head;
+				trans_cursor->trans_prior = NULL;
 
-				dfa_state_equal->trans_in = trans_cursor;
+				if (dfa_state_cursor->trans_out_head != NULL ) {
+					dfa_state_cursor->trans_out_head->trans_prior =
+							trans_cursor;
+				}
+
+				dfa_state_equal->trans_in_head = trans_cursor;
 			}
 		}
 	}
@@ -177,5 +199,103 @@ static int dfa_states_equal(LIST_TP list1, LIST_TP list2) {
 }
 
 void dfa_print_matrix_style(DFA_TP dfa) {
+	DFA_STATE_TP dfa_state_cursor;
+	NFA_STATE_TP nfa_state_of_dfa_state;
+	LIST_ELEM_TP dfa_state_nfa_state_list_elem_cursor, char_set_cursor;
+	DFA_TRANS_TP trans_cursor;
+	int counter, char_set_length = dfa->char_set->list_size, print_bool;
 
+	//先打印 DFA 中各个状态包含了哪些 NFA 中的状态
+	printf("States of the DFA:\n");
+	dfa_state_cursor = dfa->dfa_states_head;
+
+	for (; dfa_state_cursor != NULL ;
+			dfa_state_cursor = dfa_state_cursor->state_next) {
+		printf("%d = { ", dfa_state_cursor->state_code);
+		dfa_state_nfa_state_list_elem_cursor =
+				dfa_state_cursor->nfa_states_p->list_head;
+
+		for (; dfa_state_nfa_state_list_elem_cursor != NULL ;
+				dfa_state_nfa_state_list_elem_cursor =
+						dfa_state_nfa_state_list_elem_cursor->next) {
+			nfa_state_of_dfa_state =
+					(NFA_STATE_TP) dfa_state_nfa_state_list_elem_cursor->pointer_elem;
+			printf("%d ", nfa_state_of_dfa_state->state_code);
+		}
+		printf("}\n");
+	}
+
+	//接下来打印状态转换表
+	printf("\nThe state transition table of the DFA:\n");
+	dfa_state_cursor = dfa->dfa_states_head;
+
+	printf("+--------");
+	for (counter = 0; counter < char_set_length; counter++) {
+		printf("--------");
+	}
+	printf("+\n");
+
+	char_set_cursor = dfa->char_set->list_head;
+
+	printf("|");
+	printf("        ");
+	for (; char_set_cursor != NULL ; char_set_cursor = char_set_cursor->next) {
+		putchar((char) char_set_cursor->int_elem);
+		printf("       ");
+	}
+	printf("|\n");
+
+	for (; dfa_state_cursor != NULL ;
+			dfa_state_cursor = dfa_state_cursor->state_next) {
+		printf("|%d", dfa_state_cursor->state_code);
+		//根据 state_code 的量级来打印不同的空格数目从而好对齐
+		dfa_print_blank_by_state_code(dfa_state_cursor->state_code);
+
+		for (char_set_cursor = dfa->char_set->list_head;
+				char_set_cursor != NULL ;
+				char_set_cursor = char_set_cursor->next) {
+			trans_cursor = dfa_state_cursor->trans_out_head;
+			print_bool = 0;
+
+			for (; trans_cursor != NULL ;
+					trans_cursor = trans_cursor->trans_next) {
+				if (trans_cursor->trans_char
+						== ((char) char_set_cursor->int_elem)) {
+					printf("%d", trans_cursor->state_to->state_code);
+					dfa_print_blank_by_state_code(
+							trans_cursor->state_to->state_code);
+					print_bool = 1;
+				}
+			}
+
+			if (print_bool == 0) {
+				printf("NULL    ");
+			}
+		}
+		printf("|\n");
+	}
+
+	printf("+--------");
+	for (counter = 0; counter < char_set_length; counter++) {
+		printf("--------");
+	}
+	printf("+\n");
+}
+
+static void dfa_print_blank_by_state_code(int state_code) {
+	if (state_code < 10) {
+		printf("       ");
+	} else if (state_code < 100) {
+		printf("      ");
+	} else if (state_code < 1000) {
+		printf("     ");
+	} else if (state_code < 10000) {
+		printf("    ");
+	} else if (state_code < 100000) {
+		printf("   ");
+	} else if (state_code < 1000000) {
+		printf("  ");
+	} else if (state_code < 10000000) {
+		printf(" ");
+	}
 }

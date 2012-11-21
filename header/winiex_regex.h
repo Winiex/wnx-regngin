@@ -18,6 +18,8 @@ typedef enum {
 
 LIST_TP regex_get_char_set(char *regex);
 
+int regex_validate_regex_passed(char *regex);
+
 void regex_insert_cat_char(char* regex_infix, char* regex_infix_with_cat_char);
 
 void regex_infix_to_postfix(char* regex_infix, char* regex_postfix);

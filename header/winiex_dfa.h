@@ -35,8 +35,8 @@ struct DFA_STATE {
 	int nfa_states_count;
 	DFA_STATE_TYPE_T state_type;
 	LIST_TP nfa_states_p;
-	DFA_TRANS_TP trans_in;
-	DFA_TRANS_TP trans_out;
+	DFA_TRANS_TP trans_in_head;
+	DFA_TRANS_TP trans_out_head;
 	DFA_STATE_TP state_prior;
 	DFA_STATE_TP state_next;
 };
@@ -45,6 +45,8 @@ struct DFA_TRANS {
 	char trans_char;
 	DFA_STATE_TP state_from;
 	DFA_STATE_TP state_to;
+	DFA_TRANS_TP trans_prior;
+	DFA_TRANS_TP trans_next;
 };
 
 struct DFA {
@@ -60,5 +62,7 @@ void dfa_construct_from_nfa(NFA_TP nfa, DFA_TP* dfa_p);
 void dfa_print_matrix_style(DFA_TP dfa);
 
 static int dfa_states_equal(LIST_TP list1, LIST_TP list2);
+
+static void dfa_print_blank_by_state_code(int state_code);
 
 #endif

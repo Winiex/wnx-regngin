@@ -36,6 +36,59 @@ LIST_TP regex_get_char_set(char *regex) {
 	return char_set;
 }
 
+int regex_validate_regex_passed(char *regex) {
+	LIST_TP regex_char_set;
+	STACK_TP paren_stack;
+	int result = 1, counter, regex_length = strlen(regex);
+	char current_char, validate_paren;
+
+	stack_init(&paren_stack);
+
+	//检测是否只含括号而没有字符、数字
+	regex_char_set = regex_get_char_set(regex);
+
+	if (regex_char_set->list_size == 0) {
+		result = 0;
+	}
+
+	//检测是否存在非法字符
+	for (counter = 0; counter < regex_length; counter++) {
+		current_char = regex[counter];
+
+		if ((current_char != '(') && (current_char != ')')
+				&& (current_char != '|') && (current_char != '*')
+				&& (current_char != '?') && (current_char != '+')
+				&& !regex_is_char_or_number(current_char)) {
+			result = 0;
+			break;
+		}
+	}
+
+	//检测括号的匹配是否正确
+	for (counter = 0; counter < regex_length; counter++) {
+		current_char = regex[counter];
+
+		if (current_char == '(') {
+			stack_push_int(paren_stack, current_char);
+		} else if (current_char == ')') {
+			validate_paren = (char) stack_pop_int(paren_stack);
+
+			if (validate_paren != '(') {
+				result = 0;
+				break;
+			}
+		}
+	}
+
+	if (!stack_is_empty(paren_stack)) {
+		result = 0;
+	}
+
+	stack_destroy(&paren_stack);
+
+	return result;
+}
+
 void regex_infix_to_postfix(char* regex_infix, char* regex_postfix) {
 	int counter, postfix_fill_in_index = 0;
 	int top_char_precedence, current_char_precedence;
@@ -173,7 +226,7 @@ int regex_measure_regex_memory_size(char* regex) {
 		}
 	}
 
-	//别忘了 '\0' 字符
+//别忘了 '\0' 字符
 	return result + 1;
 }
 
